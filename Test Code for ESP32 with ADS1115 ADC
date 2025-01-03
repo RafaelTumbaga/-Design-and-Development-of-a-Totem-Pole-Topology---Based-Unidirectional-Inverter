@@ -1,0 +1,38 @@
+#include <Wire.h>
+#include <Adafruit_ADS1X15.h>
+
+Adafruit_ADS1115 ads; // Create ADS1115 object
+const int ledPin = 2; // LED connected to GPIO2 (D2)
+
+void setup() {
+  Serial.begin(115200); // Initialize Serial Monitor
+  Wire.begin(21, 22);   // SDA, SCL for ESP32
+  pinMode(ledPin, OUTPUT); // Set LED pin as OUTPUT
+
+  if (!ads.begin()) {
+    Serial.println("ADS1115 not found. Please check connections.");
+    while (1); // Halt execution
+  }
+
+  Serial.println("ADS1115 test starting...");
+}
+
+void loop() {
+  int16_t adcValue = ads.readADC_SingleEnded(0); // Read potentiometer from AIN0
+  float voltage = (adcValue * 0.1875) / 1000.0;  // Convert to voltage (mV to V)
+  
+  // Map ADC value (0-32767) to PWM (0-255) for LED brightness
+  int brightness = map(adcValue, 0, 32767, 0, 255);
+
+  analogWrite(ledPin, brightness); // Control LED brightness
+  
+  // Print ADC value and voltage to Serial Monitor
+  Serial.print("ADC Value: ");
+  Serial.print(adcValue);
+  Serial.print(" | Voltage: ");
+  Serial.print(voltage, 4); // Print voltage to 4 decimal places
+  Serial.print("V | LED Brightness: ");
+  Serial.println(brightness);
+
+  delay(500); // Delay for better readability in Serial Monitor
+}
