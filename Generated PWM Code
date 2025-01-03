@@ -1,0 +1,71 @@
+#include <Wire.h>
+
+// Pin assignments for PWM
+const int PWM_A_HS = 19; // Pin for PWM A_HS
+const int PWM_A_LS = 18; // Pin for PWM A_LS
+const int PWM_B_HS = 16; // Pin for PWM B_HS
+const int PWM_B_LS = 17; // Pin for PWM B_LS
+
+// Sine wave parameters
+float sineAmplitude = 127.0; // Amplitude for simulated sine wave
+float sineFrequency = 50;    // 50 Hz sine wave frequency
+unsigned long previousSwitchTime = 0;
+unsigned long previousSineTime = 0;
+
+// Timing parameters
+const unsigned long switchInterval = 100; // 10 kHz -> 100 µs period
+const unsigned long sineUpdateInterval = 10000; // Update sine wave every 10 ms (100 Hz)
+bool isPositiveHalfCycle = true;
+
+void setup() {
+  // Initialize Serial Monitor
+  Serial.begin(115200);
+
+  // Set GPIO pins as outputs
+  pinMode(PWM_A_HS, OUTPUT);
+  pinMode(PWM_A_LS, OUTPUT);
+  pinMode(PWM_B_HS, OUTPUT);
+  pinMode(PWM_B_LS, OUTPUT);
+
+  Serial.println("DigitalWrite-based H-bridge switching initialized.");
+}
+
+void loop() {
+  unsigned long currentTime = micros();
+
+  // Update sine wave every 10 ms (100 Hz)
+  if (currentTime - previousSineTime >= sineUpdateInterval) {
+    previousSineTime = currentTime;
+
+    // Generate sine wave and determine half-cycle
+    float timeSeconds = currentTime / 1e6;
+    float modTime = fmod(timeSeconds, 0.02); // 50 Hz period
+    isPositiveHalfCycle = (modTime < 0.01); // Positive half-cycle for first 10 ms
+  }
+
+  // Update switching every 100 µs (10 kHz)
+  if (currentTime - previousSwitchTime >= switchInterval) {
+    previousSwitchTime = currentTime;
+
+    // Toggle H-bridge switching based on half-cycle
+    if (isPositiveHalfCycle) {
+      // Positive half-cycle
+      digitalWrite(PWM_A_HS, HIGH); // High-side A ON
+      digitalWrite(PWM_A_LS, LOW); // Low-side A OFF
+      digitalWrite(PWM_B_HS, LOW); // High-side B OFF
+      digitalWrite(PWM_B_LS, HIGH); // Low-side B ON
+    } else {
+      // Negative half-cycle
+      digitalWrite(PWM_A_HS, LOW); // High-side A OFF
+      digitalWrite(PWM_A_LS, HIGH); // Low-side A ON
+      digitalWrite(PWM_B_HS, HIGH); // High-side B ON
+      digitalWrite(PWM_B_LS, LOW); // Low-side B OFF
+    }
+  }
+
+  // Debugging output
+  if (currentTime % 10000 == 0) { // Print debug info every 10 ms
+    Serial.print("Current Half-Cycle: ");
+    Serial.println(isPositiveHalfCycle ? "Positive" : "Negative");
+  }
+}
